@@ -304,7 +304,8 @@ const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('login-btn');
 const errorMsg = document.getElementById('error-msg');
 const overlay = document.querySelector('.overlay');
-
+const urlParams = new URLSearchParams(window.location.search);
+const email = urlParams.get("email");
 let attempts = 0;
 const maxAttempts = 3;
 
